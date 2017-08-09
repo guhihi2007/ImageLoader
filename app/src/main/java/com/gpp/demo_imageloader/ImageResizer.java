@@ -35,9 +35,10 @@ class ImageResizer {
         if (reqHeight == 0 || reqHeight == 0) {
             return 1;
         }
+        //origin尺寸
         final int height = options.outHeight;
         final int width = options.outWidth;
-        Gpp.e("origin尺寸: w=" + width + " h=" + height);
+//        Gpp.e("origin尺寸: w=" + width + " h=" + height);
         int inSampleSize = 1;
         if (height > reqHeight || width > reqWidth) {
             final int halfHeigth = height / 2;
@@ -46,7 +47,7 @@ class ImageResizer {
                 inSampleSize *= 2;
             }
         }
-        Gpp.e("sampleSize:" + inSampleSize);
+//        Gpp.e("sampleSize:" + inSampleSize);
         return inSampleSize;
     }
 }

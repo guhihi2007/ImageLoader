@@ -46,24 +46,22 @@ public class MainActivity extends AppCompatActivity {
         gv.setNumColumns(3);
         adapter = new ImageAdapter(list, this);
         gv.setAdapter(adapter);
-//        stateChanged.isChanged(isGridViewIdle);
-//        adapter.notifyDataSetChanged();
-//        gv.setOnScrollListener(new AbsListView.OnScrollListener() {
-//            @Override
-//            public void onScrollStateChanged(AbsListView absListView, int i) {
-//                if (i == AbsListView.OnScrollListener.SCROLL_STATE_IDLE) {
-//                    isGridViewIdle = true;
-//                } else {
-//                    isGridViewIdle = false;
-//                }
-//                stateChanged.isChanged(isGridViewIdle);
-//                adapter.notifyDataSetChanged();
-//            }
-//
-//            @Override
-//            public void onScroll(AbsListView absListView, int i, int i1, int i2) {
-//            }
-//        });
+        gv.setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(AbsListView absListView, int i) {
+                if (i== AbsListView.OnScrollListener.SCROLL_STATE_IDLE ) {
+                    isGridViewIdle = true;
+                } else {
+                    isGridViewIdle = false;
+                }
+                stateChanged.isChanged(isGridViewIdle);
+                adapter.notifyDataSetChanged();
+            }
+
+            @Override
+            public void onScroll(AbsListView absListView, int i, int i1, int i2) {
+            }
+        });
 //        new NewsAsycTask().execute(mURL);
     }
 

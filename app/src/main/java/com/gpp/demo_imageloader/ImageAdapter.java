@@ -14,19 +14,20 @@ import java.util.List;
  * Created by Administrator on 2017/8/5.
  */
 
-public class ImageAdapter extends BaseAdapter implements MainActivity.OnStateChanged {
+public class ImageAdapter extends BaseAdapter {
     private List<String> list;
     private LayoutInflater layoutInflater;
     private ImageLoader mImageLoader;
     private int mImageWidth, mImageHeight;
-    private boolean isGridViewIdle;
+    private boolean isGridViewIdle = true;
 
     public ImageAdapter(List<String> list, Context context) {
         this.list = list;
         layoutInflater = LayoutInflater.from(context);
         mImageLoader = ImageLoader.build(context);
-        ((MainActivity) context).setOnStateChanged(this);
+//        ((MainActivity) context).setOnStateChanged(this);
     }
+
 
     @Override
     public int getCount() {
@@ -47,32 +48,26 @@ public class ImageAdapter extends BaseAdapter implements MainActivity.OnStateCha
     public View getView(int i, View view, ViewGroup viewGroup) {
         ViewHolder holder;
         if (view == null) {
-            view = layoutInflater.inflate(R.layout.item_gv, viewGroup, false);
+            view = layoutInflater.inflate(R.layout.item_gv, null);
             holder = new ViewHolder();
-            holder.ImageView = view.findViewById(R.id.image_gv);
+            holder.squareImageView = view.findViewById(R.id.image_gv);
             view.setTag(holder);
         } else {
             holder = (ViewHolder) view.getTag();
         }
-        ImageView imageView = holder.ImageView;
-
-        mImageWidth = imageView.getWidth();
-        mImageHeight = imageView.getHeight();
-        String url = (String) getItem(i);
-        imageView.setTag(url);
-//        if (isGridViewIdle) {
-            mImageLoader.bindBitmap(url, holder.ImageView, mImageWidth, mImageHeight);
-//        }
+        SquareImageView imageView = holder.squareImageView;
+        String url = list.get(i);
+        mImageLoader.bindBitmap(url, imageView, mImageWidth, mImageHeight);
         return view;
     }
 
-    @Override
-    public void isChanged(boolean isChanged) {
-        isGridViewIdle = isChanged;
-    }
+//    @Override
+//    public void isChanged(boolean isChanged) {
+//        isGridViewIdle = isChanged;
+//    }
 
 
     class ViewHolder {
-        public ImageView ImageView;
+        public SquareImageView squareImageView;
     }
 }

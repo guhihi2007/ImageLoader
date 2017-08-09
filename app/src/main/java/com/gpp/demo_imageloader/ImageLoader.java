@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Paint;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
@@ -44,14 +45,14 @@ import libcore.io.DiskLruCache;
  * Created by Administrator on 2017/8/5.
  */
 
-public class ImageLoader {
-    private static final int MESSAGE_POST_RESULT = 1;
+public class ImageLoader implements MainActivity.OnStateChanged {
+    private static final int MESSAGE_POST_RESULT = 1;//message标识
     private static final int CPU_COUNT = Runtime.getRuntime().availableProcessors();
     private static final int CORE_POOL_SIZE = CPU_COUNT + 1;
     private static final int MAXIMUM_POOL_SIZE = CPU_COUNT * 2 + 1;
     private static final long KEEP_ALIVE = 10L;
 
-    private static final long DISK_CACHE_SIZE = 1024 * 1024 * 50;
+    private static final long DISK_CACHE_SIZE = 1024 * 1024 * 50;//SD卡缓存大小50M
     private static final int IO_BUFFER_SIZE = 8 * 1024;
     private static final int DIS_CACHE_INDEX = 0;//一个节点只能有一个数据，第一个数据下标为0
     private static final int TAG_KEY_URI = R.id.imageloader_uri;
@@ -74,10 +75,10 @@ public class ImageLoader {
         public void handleMessage(Message msg) {
             LoaderResult result = (LoaderResult) msg.obj;
             ImageView imageView = result.imageView;
-//            imageView.setImageBitmap(result.bitmap);
-//            String uri = (String) imageView.getTag(TAG_KEY_URI);//TODO
-            String uri = (String) imageView.getTag();
-            if (uri.equals(result.url)) {
+            String tag = (String) imageView.getTag(TAG_KEY_URI);//TODO
+//            String tag = (String) imageView.getTag();//
+            String url = result.url;
+            if (tag.equals(url)) {
                 imageView.setImageBitmap(result.bitmap);
             }
         }
@@ -88,9 +89,12 @@ public class ImageLoader {
 
     private ImageLoader(Context context) {
         mContext = context.getApplicationContext();
+        ((MainActivity) context).setOnStateChanged(this);
         //创建内存缓存
         int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
         int cacheSize = maxMemory / 8;
+
+        Gpp.e("cacheSize:" + cacheSize);
         mMemoryCache = new LruCache<String, Bitmap>(cacheSize) {
             @Override
             protected int sizeOf(String key, Bitmap value) {
@@ -112,6 +116,8 @@ public class ImageLoader {
         }
     }
 
+    private boolean mIsIdle = true;
+
     public static ImageLoader build(Context context) {
         return new ImageLoader(context);
     }
@@ -125,19 +131,14 @@ public class ImageLoader {
         return mMemoryCache.get(key);
     }
 
-    public void bindBitmap(final String uri, final ImageView imageview) {
-        bindBitmap(uri, imageview, 0, 0);
-    }
-
     public void bindBitmap(final String uri, final ImageView imageview, final int reqWidth, final int reqHeight) {
-//        imageview.setTag(TAG_KEY_URI, uri);
-        imageview.setTag(uri);
+        imageview.setTag(TAG_KEY_URI, uri);
+//        imageview.setTag(uri);
         Bitmap bitmap = loadBitmapFromMemoryCache(uri);//先从缓存获取图片，有则加载，无则去下载
-        if (bitmap != null) {
+        if (bitmap != null ) {
             imageview.setImageBitmap(bitmap);
             return;
         }
-//        Gpp.e("缓存获取图片:" + uri);
         Runnable loadBitmapTask = new Runnable() {
             @Override
             public void run() {
@@ -153,22 +154,25 @@ public class ImageLoader {
 
     //加载图片：从内存，SD卡，网络
     private Bitmap loadBitmap(String uri, int reqWidth, int reqHeight) {
-        Bitmap bitmap = loadBitmapFromDiskCache(uri, reqWidth, reqHeight);//如缓存没有，再从SD卡获取图片
+        Bitmap bitmap = loadBitmapFromDiskCache(uri, reqWidth, reqHeight);//从SD卡获取图片
         if (bitmap != null) {
             return bitmap;
         }
-        bitmap = loadBitmapFormHttp(uri, reqWidth, reqHeight);//如SD卡没有，再从网络获取图片
-        if (bitmap == null && !mIsDiskLruCacheCreated) {
-            bitmap = downloadBitmapFromUrl(uri);//如网络获取失败，再从网络直接获取图片
-            if (bitmap != null) {
+        if (mIsIdle) {
+            bitmap = loadBitmapFormHttp(uri, reqWidth, reqHeight);//网络下载并存到SD卡，再从SD卡取出
+            if (bitmap == null && !mIsDiskLruCacheCreated) {
+                bitmap = downloadBitmapFromUrl(uri);//如SD卡取失败，再从网络直接获取图片
                 Gpp.e("创建SD卡缓存失败，直接网络解析图片:" + uri);
             }
+        } else {
+            InputStream is = mContext.getResources().openRawResource(R.raw.ic_launcher);
+            bitmap = BitmapFactory.decodeStream(is);
         }
         return bitmap;
     }
 
     private Bitmap downloadBitmapFromUrl(String uri) {
-        Bitmap bitmap = null;
+        Bitmap bitmap;
         BufferedInputStream is = null;
         HttpURLConnection conn = null;
         try {
@@ -192,7 +196,7 @@ public class ImageLoader {
         return null;
     }
 
-    //3、从网络获取图片缓存
+    //3、从网络获取图片存到SD卡
     private Bitmap loadBitmapFormHttp(String uri, int reqWidth, int reqHeight) {
         String key = hashKeyFromUrl(uri);
         if (Looper.myLooper() == Looper.getMainLooper()) {
@@ -322,5 +326,10 @@ public class ImageLoader {
             cachePath = mContext.getExternalCacheDir().getPath();
         } else cachePath = mContext.getCacheDir().getPath();
         return new File(cachePath + File.separator + bitmap);
+    }
+
+    @Override
+    public void isChanged(boolean isChanged) {
+        mIsIdle = isChanged;
     }
 }
